@@ -1492,10 +1492,43 @@ void HelpTreeBase::FillJets( const xAOD::JetContainer* jets, int pvLocation ) {
  ********************/
 
 void HelpTreeBase::AddFatJets(std::string detailStr) {
+
+  if(m_debug) Info("AddFatJets()", "Adding fat jet variables: %s", detailStr.c_str());
+
   m_fatJetInfoSwitch = new HelperClasses::JetInfoSwitch( detailStr );
+
+  // always
+  m_tree->Branch("nfatjets",    &m_nfatjet,"nfatjets/I");
+
+  if ( m_fatJetInfoSwitch->m_kinematic ) {
+    m_tree->Branch("fatjet_E",   &m_fatjet_E);
+    m_tree->Branch("fatjet_pt",  &m_fatjet_pt);
+    m_tree->Branch("fatjet_phi", &m_fatjet_phi);
+    m_tree->Branch("fatjet_eta", &m_fatjet_eta);
+  }
+
+  this->AddFatJetsUser();
 }
-/* TODO: fatJets */
-void HelpTreeBase::FillFatJets( const xAOD::JetContainer* /*fatJets*/ ) { }
+
+void HelpTreeBase::FillFatJets( const xAOD::JetContainer* fatjets ) { 
+  this->ClearFatJets();
+  this->ClearFatJetsUser();
+
+  for( auto fatjet_itr : *fatjets ) {
+
+    if( m_fatJetInfoSwitch->m_kinematic ){
+      m_fatjet_pt.push_back ( fatjet_itr->pt() / m_units );
+      m_fatjet_eta.push_back( fatjet_itr->eta() );
+      m_fatjet_phi.push_back( fatjet_itr->phi() );
+      m_fatjet_E.push_back  ( fatjet_itr->e() / m_units );
+    }
+    this->FillFatJetsUser(fatjet_itr);
+
+    m_nfatjet++;
+
+  } // loop over fat jets
+
+}
 
 void HelpTreeBase::ClearEvent() {
   m_runNumber = m_eventNumber = m_mcEventNumber = m_mcChannelNumber = -999;
@@ -1844,6 +1877,18 @@ void HelpTreeBase::ClearJets() {
     m_jet_truth_pdgId.clear();
     m_jet_truth_partonPt.clear();
     m_jet_truth_partonDR.clear();
+  }
+
+}
+
+void HelpTreeBase::ClearFatJets() {
+
+  m_nfatjet = 0;
+  if( m_fatJetInfoSwitch->m_kinematic ){
+    m_fatjet_pt.clear();
+    m_fatjet_eta.clear();
+    m_fatjet_phi.clear();
+    m_fatjet_E.clear();
   }
 
 }
